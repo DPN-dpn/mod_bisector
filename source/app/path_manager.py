@@ -60,3 +60,4 @@ def ensure_dir(path: Optional[str]) -> bool:
     if not path:
         return False
     return os.path.isdir(path)
+

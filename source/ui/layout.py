@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from app import path_manager
+from app import path_manager, user_settings_backup
 
 
 def build_ui(root: tk.Tk) -> tk.StringVar:
@@ -31,8 +31,15 @@ def build_ui(root: tk.Tk) -> tk.StringVar:
     content = ttk.Frame(root, padding=12)
     content.pack(fill="both", expand=True)
 
-    placeholder = ttk.Label(content, text="여기에 UI를 구성하세요.")
-    placeholder.pack()
+    # 설정 백업/불러오기 버튼 그룹
+    backup_frame = ttk.LabelFrame(content, text="설정 백업/불러오기", padding=(8, 8))
+    backup_frame.pack(fill="x", pady=0)
+
+    btn_backup = ttk.Button(backup_frame, text="백업", command=user_settings_backup.backup_settings)
+    btn_load = ttk.Button(backup_frame, text="불러오기", command=user_settings_backup.load_settings)
+
+    btn_backup.pack(side="left", padx=(0, 8))
+    btn_load.pack(side="left")
 
     # 초기값 설정 (저장된 경로가 있으면 불러오기)
     try:
@@ -43,3 +50,4 @@ def build_ui(root: tk.Tk) -> tk.StringVar:
         pass
 
     return path_var
+
