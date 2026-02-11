@@ -178,8 +178,10 @@ def run_bisection(start_path: str) -> None:
         print("모드를 찾지 못했습니다.")
         return
 
-    # Print full mod list as JSON
-    print(json.dumps(mods, ensure_ascii=False))
+    # Human-friendly mod list output
+    print(f"발견된 모드 수: {len(mods)}")
+    for m in mods:
+        print(f"- {m.get('name')}: {m.get('path')}")
 
     # Build candidate list (original, unprefixed paths). Do not include
     # items already prefixed with DISABLED at program start.
@@ -252,8 +254,19 @@ def run_bisection(start_path: str) -> None:
                 if p not in first
             ]
             remaining_list = [{"name": os.path.basename(p), "path": p} for p in first]
-            print(json.dumps({"disabled": disabled_list}, ensure_ascii=False))
-            print(json.dumps({"remaining": remaining_list}, ensure_ascii=False))
+            # Print readable summaries
+            print("비활성화된 항목:")
+            if disabled_list:
+                for d in disabled_list:
+                    print(f"- {d['name']}: {d['path']}")
+            else:
+                print("(없음)")
+            print("남아있는 항목:")
+            if remaining_list:
+                for r in remaining_list:
+                    print(f"- {r['name']}: {r['path']}")
+            else:
+                print("(없음)")
 
             resp = (
                 input(

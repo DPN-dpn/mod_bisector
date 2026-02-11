@@ -60,11 +60,14 @@ def main() -> None:
     args = parser.parse_args()
 
     matches = find_files_with_hash(args.path, args.hash)
-    try:
-        print(json.dumps(matches, ensure_ascii=False))
-    except Exception:
-        # fallback
-        print(matches)
+    # Human-friendly text output
+    if not matches:
+        print("검색 결과가 없습니다.")
+        return
+    print(f"검색 결과: {len(matches)} 파일")
+    for m in matches:
+        file = m.get("file") if isinstance(m, dict) else m
+        print(f"- {file}")
 
 
 if __name__ == '__main__':

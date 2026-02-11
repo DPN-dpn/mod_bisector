@@ -92,12 +92,16 @@ def _main(argv: List[str] | None = None) -> int:
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
-    # Print JSON result to stdout (empty dict if no duplicates)
-    try:
-        print(json.dumps(dups, ensure_ascii=False, indent=2))
-    except Exception:
-        # fallback to repr
-        print(repr(dups))
+    # Human-friendly text output
+    if not dups:
+        print("중복 해시를 찾지 못했습니다.")
+        return 0
+
+    for h, paths in sorted(dups.items()):
+        print(f"해시: {h}")
+        for p in paths:
+            print(f"  - {p}")
+        print()
     return 0
 
 
