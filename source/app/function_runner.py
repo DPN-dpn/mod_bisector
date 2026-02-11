@@ -2,11 +2,13 @@
 
 Provides small wrappers around core functions so the UI stays thin.
 """
+
 from typing import Dict, List
 import os
 import sys
 import subprocess
 import threading
+import json
 
 
 def find_hash_results(path: str, hash_str: str) -> List[Dict[str, str]]:
@@ -40,7 +42,15 @@ def launch_binary_search(path: str, state_file: str) -> subprocess.Popen:
     if d:
         os.makedirs(d, exist_ok=True)
 
-    cmd = [sys.executable, "-m", "source.app.function.binary_search_mod", "run", path, "--state", state_file]
+    cmd = [
+        sys.executable,
+        "-m",
+        "source.app.function.binary_search_mod",
+        "run",
+        path,
+        "--state",
+        state_file,
+    ]
 
     creationflags = 0
     if os.name == "nt":
@@ -53,18 +63,20 @@ def launch_binary_search(path: str, state_file: str) -> subprocess.Popen:
     return proc
 
 
-def recover_state(state_file: str) -> int:
+def recover_state(path: str, state_file: str) -> int:
     """Recover entries from the given state file using module logic.
 
     Returns number of items restored. Raises exceptions on unexpected errors.
     """
-    # import and call recover_from_state directly to avoid spawning a process
+    # Delegate recovery to the core module which now handles any pre-recover work.
     from app.function.binary_search_mod import recover_from_state
 
-    return recover_from_state(state_file)
+    return recover_from_state(path, state_file)
 
 
-def run_binary_search_gui(path: str, state_file: str, ask_fn, result_fn=None, stop_event=None) -> threading.Thread:
+def run_binary_search_gui(
+    path: str, state_file: str, ask_fn, result_fn=None, stop_event=None
+) -> threading.Thread:
     """Run binary search in a background thread, using `ask_fn` for prompts.
 
     `ask_fn` should be a callable that accepts a prompt string and returns
@@ -72,6 +84,8 @@ def run_binary_search_gui(path: str, state_file: str, ask_fn, result_fn=None, st
     receive the final found mode string. The returned `Thread` is started
     and returned to the caller.
     """
+    # NOTE: pre-run backup moved to `binary_search_mod.run_bisection`.
+
     def target():
         # import here to ensure module is fresh and available
         import app.function.binary_search_mod as mod

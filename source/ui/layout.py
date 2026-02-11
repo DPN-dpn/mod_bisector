@@ -166,7 +166,7 @@ def build_ui(root: tk.Tk) -> tk.StringVar:
             btn_recover.state(["disabled"])
             return
         try:
-            n = recover_state(state_file)
+            n = recover_state(_ensure_valid_path(), state_file)
             messagebox.showinfo("복원 완료", f"복구 시도 완료: {n} 항목 복구됨")
             # hide recover button after successful recovery
             try:

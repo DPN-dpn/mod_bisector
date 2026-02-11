@@ -170,24 +170,72 @@ def _load_state(path: str) -> List[str]:
     return out
 
 
-def recover_from_state(path: str) -> int:
+def recover_from_state(path: str, state_file: str) -> int:
     """Recover (enable) entries recorded in state file. Returns number restored.
 
     State file contains a JSON list of disabled-on-disk paths (strings).
     """
+    # Pre-recover: if a backup exists in workspace temp, try to restore it
+    restored_backup = False
+    try:
+        workspace_root = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..", "..")
+        )
+        temp_dir = os.path.join(workspace_root, "temp")
+        backup_ini = os.path.join(temp_dir, "d3dx_user.ini")
+        if os.path.exists(backup_ini):
+            if not path:
+                print("복원: 원본 위치를 결정할 수 없어 백업을 복원하지 않습니다.", file=sys.stderr)
+            else:
+                try:
+                    src_ini = os.path.normpath(os.path.join(path, os.pardir, "d3dx_user.ini"))
+                    tmp_dst = src_ini + ".tmp"
+                    with open(backup_ini, "rb") as fr, open(tmp_dst, "wb") as fw:
+                        fw.write(fr.read())
+                    os.replace(tmp_dst, src_ini)
+                    restored_backup = True
+                    print(f"복원: 백업을 {src_ini}로 복원했습니다.", file=sys.stderr)
+                except Exception as e:
+                    print(f"복원 실패: {e}", file=sys.stderr)
+            # only remove backup if restore succeeded
+            if restored_backup:
+                try:
+                    os.remove(backup_ini)
+                except Exception:
+                    pass
+    except Exception:
+        # ignore failures to locate/restore backups; proceed to normal recover
+        pass
+    
     restored = 0
-    data = _load_state(path)
+    data = _load_state(state_file)
     for disabled in data:
         if os.path.exists(disabled) and _is_disabled_name(os.path.basename(disabled)):
             enable_folder(disabled)
             restored += 1
     # remove state file after attempting recovery
-    if os.path.exists(path):
-        os.remove(path)
+    if os.path.exists(state_file):
+        os.remove(state_file)
     return restored
 
 
 def run_bisection(start_path: str) -> None:
+    # Pre-run: backup ..\d3dx_user.ini (relative to `start_path`) into workspace temp
+    try:
+        workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        temp_dir = os.path.join(workspace_root, "temp")
+        os.makedirs(temp_dir, exist_ok=True)
+        src_ini = os.path.normpath(os.path.join(start_path, os.pardir, "d3dx_user.ini"))
+        if os.path.exists(src_ini):
+            dst = os.path.join(temp_dir, "d3dx_user.ini")
+            tmp = dst + ".tmp"
+            with open(src_ini, "rb") as fr, open(tmp, "wb") as fw:
+                fw.write(fr.read())
+            os.replace(tmp, dst)
+    except Exception:
+        # Do not fail the operation if backup cannot be made; just continue.
+        pass
+
     mods = find_mod_folders(start_path)
     if not mods:
         print("모드를 찾지 못했습니다.")
@@ -288,7 +336,7 @@ def run_bisection(start_path: str) -> None:
 
             resp = (
                 ASK_FN(
-                    "이 상태에서 문제(또는 원하는 결과)가 발생합니까? (Y=예, N=아니오): "
+                    "이 상태에서 문제(또는 원하는 결과)가 발생합니까?\n인게임에서 F10을 눌러 확인하세요: "
                 )
                 .strip()
                 .lower()
@@ -332,7 +380,7 @@ def run_bisection(start_path: str) -> None:
         # nothing to recover here.
         if STATE_FILE and not (STOP_EVENT and STOP_EVENT.is_set()):
             # Only auto-recover when the run was not aborted by the user.
-            recover_from_state(STATE_FILE)
+            recover_from_state(src_ini, STATE_FILE)
 
 
 def main() -> None:
