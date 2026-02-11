@@ -74,10 +74,39 @@ def build_ui(root: tk.Tk) -> tk.StringVar:
             return None
         return p
 
+    def update_button_states() -> None:
+        """Enable or disable action buttons depending on whether a valid path is set."""
+        p = path_var.get()
+        ok = path_manager.ensure_dir(p)
+        try:
+            if ok:
+                btn_find_hash.state(["!disabled"])
+                btn_find_duplicates.state(["!disabled"])
+                btn_binary_search.state(["!disabled"])
+                # recover button visibility is tied to state file; enable if mapped
+                if btn_recover.winfo_ismapped():
+                    btn_recover.state(["!disabled"])
+            else:
+                btn_find_hash.state(["disabled"])
+                btn_find_duplicates.state(["disabled"])
+                btn_binary_search.state(["disabled"])
+                try:
+                    btn_recover.state(["disabled"])
+                except Exception:
+                    pass
+        except Exception:
+            # conservative fallback: no crash if widget state ops fail
+            pass
+
     def _on_browse() -> None:
         p = path_manager.browse_directory(root)
         if p:
             path_var.set(p)
+            # immediately update button states when user selects a folder
+            try:
+                update_button_states()
+            except Exception:
+                pass
 
     def on_find_hash() -> None:
         p = _ensure_valid_path()
@@ -218,5 +247,19 @@ def build_ui(root: tk.Tk) -> tk.StringVar:
             path_var.set(last)
     except Exception:
         pass
+    # watch for path changes (trace) to update button states
+    try:
+        # tkinter 8.6+ / Python 3.7+: trace_add is preferred
+        path_var.trace_add("write", lambda *a: update_button_states())
+    except Exception:
+        try:
+            path_var.trace("w", lambda *a: update_button_states())
+        except Exception:
+            pass
 
+    # ensure initial button state reflects any loaded path
+    try:
+        update_button_states()
+    except Exception:
+        pass
     return path_var
